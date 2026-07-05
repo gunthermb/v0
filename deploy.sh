@@ -59,6 +59,7 @@ echo "==> 3/4  Upload site to s3://$BUCKET"
 # NOTE: make sure aws-config.js is filled in and copied into the site root first.
 aws s3 sync "$SITE_DIR" "s3://$BUCKET" \
   --exclude ".git/*" --exclude "aws-native/*" --exclude ".idea/*" \
+  --exclude "AWS-native2/*" \
   --exclude "*.md" --exclude "deploy.sh" \
   --exclude "*.DS_Store" --exclude ".env" --exclude "*.local.md"
 

@@ -4,21 +4,24 @@
 #
 # The existing site at the root is untouched; this only (re)creates the /new/ folder.
 #
-# Usage:
+# Usage (defaults to the sibling ../AWS-native2 checkout):
+#   tools/build-new-look.sh
 #   tools/build-new-look.sh /path/to/AWS-native2
 #   BASE44_APP_DIR=/path/to/AWS-native2 tools/build-new-look.sh
 set -euo pipefail
 
-APP_DIR="${1:-${BASE44_APP_DIR:-}}"
-if [ -z "$APP_DIR" ]; then
-  echo "Usage: $0 <path-to-AWS-native2-repo>" >&2
-  exit 1
-fi
-APP_DIR="$(cd "$APP_DIR" && pwd)"
-
 # closetheoffer.com/ — same directory deploy.sh treats as SITE_DIR (repo root's parent).
 SITE_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 DEST="$SITE_DIR/new"
+
+# Base44 app checkout: arg > env var > sibling AWS-native2 under the site dir.
+APP_DIR="${1:-${BASE44_APP_DIR:-$SITE_DIR/AWS-native2}}"
+if [ ! -d "$APP_DIR" ]; then
+  echo "Base44 app not found at: $APP_DIR" >&2
+  echo "Pass the path explicitly: $0 <path-to-AWS-native2-repo>" >&2
+  exit 1
+fi
+APP_DIR="$(cd "$APP_DIR" && pwd)"
 
 echo "==> Building base44 app at $APP_DIR with base path /new/"
 ( cd "$APP_DIR" && npm install && VITE_BASE_PATH=/new/ npm run build )
