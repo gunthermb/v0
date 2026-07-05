@@ -43,6 +43,10 @@ Resources:
           }
           var last = uri.substring(uri.lastIndexOf('/') + 1);
           if (last.indexOf('.') !== -1) { req.uri = uri; return req; }
+          // New-look base44 app is hosted as a SPA under /new. Route all of its
+          // extensionless paths (/new, /new/jobs, ...) to its own index.html.
+          // Its hashed assets have file extensions and are served as-is above.
+          if (uri === '/new' || uri.indexOf('/new/') === 0) { req.uri = '/new/index.html'; return req; }
           var map = {
             '/dashboard': '/dashboard.html',
             '/login': '/login.html',
