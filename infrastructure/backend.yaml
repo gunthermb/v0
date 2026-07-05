@@ -1,0 +1,315 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  CloseTheOffer AWS-native backend — Cognito (auth), HTTP API + Lambda (Bedrock
+  resume scan), DynamoDB (per-user data). Replaces Supabase and the Anthropic API.
+
+Parameters:
+  AppName:
+    Type: String
+    Default: closetheoffer
+  CallbackURL:
+    Type: String
+    Default: https://closetheoffer.com/dashboard
+    Description: Where Cognito Hosted UI / Google returns after sign-in.
+  LogoutURL:
+    Type: String
+    Default: https://closetheoffer.com/login
+  AllowedOrigin:
+    Type: String
+    Default: 'https://closetheoffer.com,https://www.closetheoffer.com,https://d3holrr9fpnwaw.cloudfront.net'
+    Description: >
+      Comma-separated CORS allow-list (the Lambdas echo a matching caller origin).
+      Add your custom domain here too, e.g. 'https://d3holrr9fpnwaw.cloudfront.net,https://closetheoffer.com'.
+      Use '*' only for local testing.
+  BedrockModelId:
+    Type: String
+    Default: us.anthropic.claude-haiku-4-5-20251001-v1:0
+    Description: A callable Bedrock model/inference-profile ID (region-prefixed for inference profiles).
+  GoogleClientId:
+    Type: String
+    Default: ''
+    Description: (Optional) Google OAuth client ID to enable "Continue with Google".
+  GoogleClientSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
+  AdzunaAppId:
+    Type: String
+    Default: ''
+    Description: (Optional) Adzuna app_id — a PUBLIC identifier. The app_key + JSearch key
+      are NOT template params; they live in SSM SecureString and are fetched by the Lambda.
+
+Conditions:
+  HasGoogle: !Not [!Equals [!Ref GoogleClientId, '']]
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 30
+    MemorySize: 256
+    Architectures: [arm64]
+
+Resources:
+
+  # ── Auth: Cognito User Pool ──────────────────────────────
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${AppName}-users'
+      AutoVerifiedAttributes: [email]
+      UsernameAttributes: [email]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          TemporaryPasswordValidityDays: 3
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+
+  GoogleIdP:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasGoogle
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: 'openid email profile'
+      AttributeMapping:
+        email: email
+        name: name
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '${AppName}-web'
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      # Shorter-lived tokens, revocable on sign-out, and no user-enumeration leak.
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      RefreshTokenValidity: 7
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+      EnableTokenRevocation: true
+      PreventUserExistenceErrors: ENABLED
+      # Referencing !Ref GoogleIdP (returns "Google") also orders creation correctly.
+      SupportedIdentityProviders: !If
+        - HasGoogle
+        - [COGNITO, !Ref GoogleIdP]
+        - [COGNITO]
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      AllowedOAuthFlowsUserPoolClient: true
+      # Accept sign-in redirects from the custom domain (apex + www) and the CloudFront URL.
+      CallbackURLs:
+        - https://closetheoffer.com/dashboard
+        - https://www.closetheoffer.com/dashboard
+        - https://d3holrr9fpnwaw.cloudfront.net/dashboard
+      LogoutURLs:
+        - https://closetheoffer.com/login
+        - https://www.closetheoffer.com/login
+        - https://d3holrr9fpnwaw.cloudfront.net/login
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Sub '${AppName}-auth-${AWS::AccountId}'
+
+  # ── Data: DynamoDB (per-user) ────────────────────────────
+  DataTable:
+    Type: AWS::DynamoDB::Table
+    # Keep the table if the stack is ever deleted (extra guard against data loss).
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub '${AppName}-data'
+      BillingMode: PAY_PER_REQUEST
+      # Continuous backups — restore to any second in the last 35 days.
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      # Block accidental table deletion via API/console.
+      DeletionProtectionEnabled: true
+      # Encrypt at rest with an AWS-managed KMS key (vs the default AWS-owned key).
+      SSESpecification:
+        SSEEnabled: true
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: item
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: item
+          KeyType: RANGE
+
+  # ── API: HTTP API with Cognito JWT authorizer ────────────
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      # CORS is handled by the Lambdas (deterministic single set of headers). The OPTIONS
+      # routes below are unauthenticated so the browser preflight is never blocked by the
+      # JWT authorizer.
+      # Throttling: caps abuse and runaway Bedrock cost. ~10 req/s steady, 20 burst is
+      # generous for a single-user app but stops a flood (a script hammering /scan).
+      DefaultRouteSettings:
+        ThrottlingRateLimit: 10
+        ThrottlingBurstLimit: 20
+        DetailedMetricsEnabled: true
+      Auth:
+        Authorizers:
+          CognitoJwt:
+            IdentitySource: '$request.header.Authorization'
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
+              audience: [!Ref UserPoolClient]
+        DefaultAuthorizer: CognitoJwt
+
+  ResumeScanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: ../src/resume-scan/
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+      Policies:
+        - Statement:
+            # Inference profiles route across regions, so allow the profile in this
+            # account plus the underlying foundation models in any region.
+            - Effect: Allow
+              Action: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream']
+              # Scoped to Anthropic models / profiles only (was '*' across all vendors).
+              Resource:
+                - 'arn:aws:bedrock:*::foundation-model/anthropic.*'
+                - !Sub 'arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*anthropic.*'
+      Events:
+        Scan:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /scan
+            Method: POST
+        ScanOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /scan
+            Method: OPTIONS
+            Auth:
+              Authorizer: NONE
+
+  JobSearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: ../src/job-search/
+      Timeout: 30
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+          ADZUNA_APP_ID: !Ref AdzunaAppId
+          # Secret keys are NOT in the env — fetched from SSM SecureString at runtime.
+          ADZUNA_APP_KEY_PARAM: !Sub '/${AppName}/adzuna-app-key'
+          JSEARCH_RAPIDAPI_KEY_PARAM: !Sub '/${AppName}/jsearch-rapidapi-key'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream']
+              # Scoped to Anthropic models / profiles only (was '*' across all vendors).
+              Resource:
+                - 'arn:aws:bedrock:*::foundation-model/anthropic.*'
+                - !Sub 'arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*anthropic.*'
+            # Read the two SecureString secrets (least privilege: only these params).
+            - Effect: Allow
+              Action: ['ssm:GetParameter', 'ssm:GetParameters']
+              Resource:
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AppName}/adzuna-app-key'
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AppName}/jsearch-rapidapi-key'
+            # Decrypt SecureString values — restricted to SSM-mediated decryption only.
+            - Effect: Allow
+              Action: 'kms:Decrypt'
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  kms:ViaService: !Sub 'ssm.${AWS::Region}.amazonaws.com'
+      Events:
+        Jobs:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /jobs
+            Method: POST
+        JobsOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /jobs
+            Method: OPTIONS
+            Auth:
+              Authorizer: NONE
+
+  DataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: ../src/data/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DataTable
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DataTable
+      Events:
+        GetData:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /data
+            Method: GET
+        PutData:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /data
+            Method: POST
+        DataOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /data
+            Method: OPTIONS
+            Auth:
+              Authorizer: NONE
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  HostedUIDomain:
+    Value: !Sub 'https://${AppName}-auth-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com'
+  ApiBaseUrl:
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+  Region:
+    Value: !Ref AWS::Region
