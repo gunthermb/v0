@@ -43,21 +43,6 @@ Resources:
           }
           var last = uri.substring(uri.lastIndexOf('/') + 1);
           if (last.indexOf('.') !== -1) { req.uri = uri; return req; }
-          // /new = the reskinned static CloseTheOffer site (base44 look). Mirror the
-          // root clean-URL routing below, but under the /new/ prefix.
-          if (uri === '/new') { req.uri = '/new/index.html'; return req; }
-          if (uri.indexOf('/new/') === 0) {
-            var nsub = uri.substring(5);
-            if (nsub === '') { req.uri = '/new/index.html'; return req; }
-            if (nsub === 'dashboard') { req.uri = '/new/dashboard.html'; return req; }
-            if (nsub === 'login' || nsub === 'signup') { req.uri = '/new/login.html'; return req; }
-            if (nsub === 'freemode') { req.uri = '/new/app-free.html'; return req; }
-            var npages = { 'about': 1, 'blog': 1, 'changelog': 1, 'privacy': 1, 'terms': 1, 'index': 1 };
-            if (npages[nsub]) { req.uri = '/new/' + nsub + '.html'; return req; }
-            if (nsub.indexOf('/') === -1) { req.uri = '/new/app.html'; return req; }
-            req.uri = '/new/' + nsub + '.html';
-            return req;
-          }
           var map = {
             '/dashboard': '/dashboard.html',
             '/login': '/login.html',

@@ -21,7 +21,7 @@ if [ -f "$HERE/.env" ]; then
   set -a; . "$HERE/.env"; set +a
 fi
 
-echo "==> 1/5  Deploy backend (Cognito + API + Bedrock + DynamoDB)"
+echo "==> 1/4  Deploy backend (Cognito + API + Bedrock + DynamoDB)"
 # Optional Google login: export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET first.
 PARAMS="AppName=$APP"
 if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
@@ -46,7 +46,7 @@ echo "==> backend outputs (paste these into frontend/aws-config.js):"
 aws cloudformation describe-stacks --region "$REGION" --stack-name "${APP}-backend" \
   --query "Stacks[0].Outputs" --output table
 
-echo "==> 2/5  Deploy hosting (S3 + CloudFront + routing function)"
+echo "==> 2/4  Deploy hosting (S3 + CloudFront + routing function)"
 aws cloudformation deploy \
   --region "$REGION" \
   --stack-name "${APP}-hosting" \
@@ -60,7 +60,7 @@ DIST=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "${APP
 
 NEW_BUILD="$HERE/new-skin/build.sh"
 
-echo "==> 3/5  Upload site to s3://$BUCKET (base44 reskin at the root)"
+echo "==> 3/4  Upload site to s3://$BUCKET (base44 reskin at the root)"
 # NOTE: make sure aws-config.js is filled in and copied into the site root first.
 # First sync the raw site (brings every file — aws-config.js, seed-data.js, etc.)...
 aws s3 sync "$SITE_DIR" "s3://$BUCKET" \
@@ -79,21 +79,7 @@ else
   echo "    (skipped root reskin: $NEW_BUILD not found or not executable)"
 fi
 
-echo "==> 4/5  Build + upload the reskinned site (base44 look) to /new"
-# /new serves the SAME static site, reskinned with the base44 look and re-scoped
-# under /new (see new-skin/build.sh). It reuses this stack's Cognito auth + API,
-# so it behaves identically to the / site — just a different skin. The /new/*
-# clean-URL routing is handled by hosting.yaml's CloudFront function.
-if [ -x "$NEW_BUILD" ]; then
-  NEW_DIST="$HERE/.new-dist"
-  SITE_SRC="$SITE_DIR" "$NEW_BUILD" "$NEW_DIST"
-  # --delete keeps the /new prefix in sync with the fresh build (scoped to /new).
-  aws s3 sync "$NEW_DIST" "s3://$BUCKET/new" --delete --exclude "*.DS_Store"
-else
-  echo "    (skipped: $NEW_BUILD not found or not executable)"
-fi
-
-echo "==> 5/5  Invalidate CloudFront cache"
+echo "==> 4/4  Invalidate CloudFront cache"
 aws cloudfront create-invalidation --distribution-id "$DIST" --paths "/*" >/dev/null
 
 echo "Done. Site URL:"
