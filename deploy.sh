@@ -58,20 +58,32 @@ BUCKET=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "${A
 DIST=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "${APP}-hosting" \
   --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)
 
-echo "==> 3/5  Upload site to s3://$BUCKET"
+NEW_BUILD="$HERE/new-skin/build.sh"
+
+echo "==> 3/5  Upload site to s3://$BUCKET (base44 reskin at the root)"
 # NOTE: make sure aws-config.js is filled in and copied into the site root first.
+# First sync the raw site (brings every file — aws-config.js, seed-data.js, etc.)...
 aws s3 sync "$SITE_DIR" "s3://$BUCKET" \
   --exclude ".git/*" --exclude "aws-native/*" --exclude ".idea/*" \
   --exclude "AWS-native2/*" \
   --exclude "*.md" --exclude "deploy.sh" \
   --exclude "*.DS_Store" --exclude ".env" --exclude "*.local.md"
+# ...then overlay the base44 reskin on the root pages (reskinned HTML + skin.css +
+# hero image). BASE_PREFIX="" keeps all links/redirects root-relative. No behaviour
+# change — CSS/asset overlay only. No --delete (leave the raw-synced files in place).
+if [ -x "$NEW_BUILD" ]; then
+  ROOT_DIST="$HERE/.root-dist"
+  BASE_PREFIX="" SITE_SRC="$SITE_DIR" "$NEW_BUILD" "$ROOT_DIST"
+  aws s3 sync "$ROOT_DIST" "s3://$BUCKET" --exclude "*.DS_Store"
+else
+  echo "    (skipped root reskin: $NEW_BUILD not found or not executable)"
+fi
 
 echo "==> 4/5  Build + upload the reskinned site (base44 look) to /new"
 # /new serves the SAME static site, reskinned with the base44 look and re-scoped
 # under /new (see new-skin/build.sh). It reuses this stack's Cognito auth + API,
 # so it behaves identically to the / site — just a different skin. The /new/*
 # clean-URL routing is handled by hosting.yaml's CloudFront function.
-NEW_BUILD="$HERE/new-skin/build.sh"
 if [ -x "$NEW_BUILD" ]; then
   NEW_DIST="$HERE/.new-dist"
   SITE_SRC="$SITE_DIR" "$NEW_BUILD" "$NEW_DIST"

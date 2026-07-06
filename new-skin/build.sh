@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Created by GuntherCloudSolutions
 #
-# Build the /new payload: the SAME working static site (index/login/dashboard/app/
-# app-free + legal pages) reskinned with the base44 look and re-scoped so every
-# link/redirect stays under /new. No markup/JS behaviour changes — just the skin
-# stylesheet + path rewrites. Output dir is synced to s3://<bucket>/new by deploy.sh.
+# Reskin the SAME working static site (index/login/dashboard/app/app-free + legal
+# pages) with the base44 look. No markup/JS behaviour changes — just the skin
+# stylesheet + palette recolor + path rewrites.
+#
+# BASE_PREFIX controls where the payload is served:
+#   BASE_PREFIX=/new  (default) -> the /new copy: assets + links/redirects under /new/
+#   BASE_PREFIX=       (empty)  -> the site root: assets at / and links left root-relative
 set -euo pipefail
 
 SKIN_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -16,6 +19,9 @@ if [ -z "${SRC:-}" ] || [ ! -f "$SRC/index.html" ]; then
   exit 1
 fi
 OUT="${1:-$SKIN_DIR/.new-dist}"
+# Sub-path prefix for assets/links. Note: `${BASE_PREFIX-/new}` (no colon) keeps an
+# explicitly-empty value empty (root site) while defaulting to /new when unset.
+BASE="${BASE_PREFIX-/new}"
 
 rm -rf "$OUT"; mkdir -p "$OUT"
 
@@ -24,23 +30,26 @@ cp "$SRC"/*.html "$OUT"/
 cp "$SRC"/aws-config.js "$OUT"/ 2>/dev/null || true
 cp "$SRC"/seed-data.js "$OUT"/ 2>/dev/null || true
 cp "$SKIN_DIR/skin.css" "$OUT"/skin.css
+# point the skin's asset URLs (e.g. the hero image) at the right base path
+perl -0pi -e "s#/new/#${BASE}/#g" "$OUT"/skin.css
 # base44 hero background image (self-hosted, not hot-linked from base44's CDN)
 [ -f "$SKIN_DIR/hero-bg.jpg" ] && cp "$SKIN_DIR/hero-bg.jpg" "$OUT"/hero-bg.jpg
 
 # --- 1) inject the skin stylesheet LAST in <head> so it wins the cascade ---
 for f in "$OUT"/*.html; do
-  perl -0pi -e 's#</head>#  <link rel="stylesheet" href="/new/skin.css">\n</head>#i' "$f"
+  perl -0pi -e "s#</head>#  <link rel=\"stylesheet\" href=\"${BASE}/skin.css\">\n</head>#i" "$f"
 done
 
-# --- 2) re-scope clean-URL links + JS redirects to /new ---
+# --- 2) re-scope clean-URL links + JS redirects to the base path
+#        (BASE_PREFIX="" leaves them root-relative — a no-op for the root site) ---
 for f in "$OUT"/*.html; do
-  perl -0pi -e 's#href="/(about|blog|changelog|login|privacy|terms|dashboard|freemode)"#href="/new/$1"#g' "$f"
-  perl -0pi -e "s#(['\"])/dashboard\\1#\$1/new/dashboard\$1#g" "$f"
-  perl -0pi -e "s#(['\"])/login\\1#\$1/new/login\$1#g" "$f"
+  perl -0pi -e "s#href=\"/(about|blog|changelog|login|privacy|terms|dashboard|freemode)\"#href=\"${BASE}/\$1\"#g" "$f"
+  perl -0pi -e "s#(['\"])/dashboard\\1#\$1${BASE}/dashboard\$1#g" "$f"
+  perl -0pi -e "s#(['\"])/login\\1#\$1${BASE}/login\$1#g" "$f"
 done
 
-# --- 3) aws-config.js: OAuth callback must return under /new ---
-perl -0pi -e "s#window.location.origin \\+ '/dashboard'#window.location.origin + '/new/dashboard'#g" "$OUT/aws-config.js"
+# --- 3) aws-config.js: OAuth callback returns under the base path ---
+perl -0pi -e "s#window.location.origin \\+ '/dashboard'#window.location.origin + '${BASE}/dashboard'#g" "$OUT/aws-config.js"
 
 # --- 4) recolor the hardcoded brand palette to base44 (purple -> black/olive,
 #        dark navy -> warm near-black, purple-tinted whites -> cream). Semantic
@@ -62,5 +71,5 @@ for f in "$OUT"/*.html "$OUT"/*.css; do
   ' "$f"
 done
 
-echo "Built /new (reskinned static site) -> $OUT"
+echo "Built reskinned static site (base='${BASE:-/}') -> $OUT"
 ls -1 "$OUT" | sed 's/^/  /'

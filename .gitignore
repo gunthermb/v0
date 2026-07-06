@@ -2,3 +2,4 @@
 # reskin build output
 .new-dist/
 new-skin/.new-dist/
+.root-dist/
