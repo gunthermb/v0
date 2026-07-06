@@ -223,14 +223,21 @@ header:has(.header-user) {
   flex-wrap: nowrap !important;
   justify-content: space-between !important;
   align-items: center !important;
-  min-height: 66px !important;
+  min-height: 108px !important;
 }
-header:has(.header-user)::after {
-  content: "CloseTheOffer";
+header:has(.header-user)::after { content: none !important; }   /* replaced by the real .app-brand element */
+.app-brand {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  font-family: 'Archivo', ui-sans-serif, sans-serif; font-weight: 800;
-  font-size: clamp(1.6rem, 3vw, 2.7rem); letter-spacing: -0.03em;
-  color: var(--text); white-space: nowrap; pointer-events: none;
+  font-family: 'Archivo', ui-sans-serif, sans-serif !important;
+  font-weight: 900 !important;
+  font-size: clamp(3.2rem, 6vw, 5.4rem) !important;   /* ~2x the previous size */
+  letter-spacing: -0.04em !important;
+  color: var(--text) !important; text-decoration: none !important;
+  white-space: nowrap !important; line-height: 1 !important;
+}
+/* Two-tone wordmark: "The" in the olive accent, on every CloseTheOffer mark */
+.app-brand span, .nav-logo span, .logo span, a.logo span, .brand span {
+  color: var(--accent) !important;
 }
 header:has(.header-user) h1 {
   flex: 0 1 auto !important; order: 0 !important;
