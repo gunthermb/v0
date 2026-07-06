@@ -24,6 +24,8 @@ cp "$SRC"/*.html "$OUT"/
 cp "$SRC"/aws-config.js "$OUT"/ 2>/dev/null || true
 cp "$SRC"/seed-data.js "$OUT"/ 2>/dev/null || true
 cp "$SKIN_DIR/skin.css" "$OUT"/skin.css
+# base44 hero background image (self-hosted, not hot-linked from base44's CDN)
+[ -f "$SKIN_DIR/hero-bg.jpg" ] && cp "$SKIN_DIR/hero-bg.jpg" "$OUT"/hero-bg.jpg
 
 # --- 1) inject the skin stylesheet LAST in <head> so it wins the cascade ---
 for f in "$OUT"/*.html; do

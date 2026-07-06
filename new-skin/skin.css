@@ -67,3 +67,14 @@ a:hover { color: var(--accent); }
 
 /* subtle hairline dividers instead of heavy shadows where the site draws borders */
 hr { border: 0; border-top: 1px solid var(--border); }
+
+/* ---- base44 hero: "raking light" architecture image layered under a warm
+   near-black wash, so it reads as subtle texture and the light text stays legible ---- */
+.hero {
+  background-image:
+    linear-gradient(135deg, rgba(28,28,26,.90) 0%, rgba(43,43,38,.83) 50%, rgba(28,28,26,.90) 100%),
+    url('/new/hero-bg.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
