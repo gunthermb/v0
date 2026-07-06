@@ -62,8 +62,9 @@ for f in "$OUT"/*.html "$OUT"/*.css; do
     s/#8b5cf6/#6e746a/gi; s/#8b7bf0/#6e746a/gi; s/#a29bfe/#8a8f82/gi; s/#a78bfa/#8a8f82/gi;
     # light purple tints -> warm cream tints
     s/#c4b5fd/#cfd0c4/gi; s/#d9d4ff/#e7e2d6/gi; s/#ede9ff/#eceadf/gi; s/#e9e5ff/#eceadf/gi;
-    # dark navy hero/section backgrounds -> warm near-black
+    # dark navy hero/section/header backgrounds -> warm near-black
     s/#1a1a2e/#1c1c1a/gi; s/#2d2b55/#2b2b26/gi; s/#0f0e1a/#141412/gi; s/#16213e/#1c1c1a/gi;
+    s/#2a2752/#2b2b26/gi; s/#3a2f6b/#333029/gi; s/#2a2f6b/#2b2b26/gi;   # app header purple gradient
     # purple-tinted off-whites -> cream
     s/#faf9ff/#f3efe6/gi; s/#f6f7fb/#efeae0/gi; s/#f8f7ff/#efeae0/gi; s/#f5f6f8/#f3efe6/gi;
     # purple glows (rgba of #6c5ce7 = 108,92,231) -> olive glow (110,116,106)

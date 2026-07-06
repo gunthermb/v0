@@ -70,6 +70,28 @@ button, .btn, input, textarea, select,
   border-radius: 50% !important;
 }
 
+/* ---- Header/nav is part of the page background (shows the fixed image through) on
+   EVERY page — never a solid or purple bar. The dashboard-mockup's own dark header
+   (.mock-header) is left intact. Text goes dark so it reads on the light image. ---- */
+header:not(.mock-header), nav, .nav, .navbar, .topbar, .site-header, .site-nav {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border-bottom-color: hsl(var(--hairline)) !important;
+}
+.dashboard-mockup header, .dashboard-mockup nav { background: initial !important; }  /* don't touch the mockup */
+header:not(.mock-header), header:not(.mock-header) *,
+nav:not(.mock-tabs), .nav, .nav *, .topbar, .topbar * {
+  color: var(--text) !important;
+}
+/* keep the black primary CTA legible (light text on the dark button) */
+header:not(.mock-header) .btn-primary, header:not(.mock-header) .btn-primary *,
+.nav .btn-primary, .nav .btn-primary *, .topbar .btn-primary, .topbar .btn-primary * {
+  color: #f3efe6 !important;
+}
+
 /* ---- Accent + surfaces ---- */
 a { color: var(--purple); }
 a:hover { color: var(--accent); }
