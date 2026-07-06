@@ -151,3 +151,34 @@ hr { border: 0; border-top: 1px solid var(--border); }
 .pipeline .col { min-width: 344px !important; }
 /* match Interview Prep's card padding so the cards read as one size */
 .int-card, .job-card, .jt-card, .conn-card { padding: 16px !important; }
+
+/* ---- Branding: large wordmark / app title, centered at the top of every page.
+   The wordmark takes its own full-width row (flex-basis:100% + order:-1); the nav
+   container is made to wrap via :has() so this works whatever its class is. ---- */
+:has(> .nav-logo), :has(> .logo), :has(> a.logo),
+header:not(.mock-header), .nav, .navbar, .topbar {
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  row-gap: 8px !important;
+}
+.nav-logo, .logo, a.logo, .brand, .wordmark {
+  font-family: 'Archivo', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  font-size: clamp(1.9rem, 3.4vw, 2.7rem) !important;
+  letter-spacing: -0.03em !important;
+  flex-basis: 100% !important;
+  width: 100% !important;
+  text-align: center !important;
+  justify-content: center !important;   /* the wordmark is itself a flex <a> */
+  order: -1 !important;
+}
+
+/* ---- "Job Search Dashboard" — the app's title/branding: bigger + centered on top ---- */
+header:not(.mock-header) h1 {
+  font-size: clamp(1.9rem, 3.4vw, 2.7rem) !important;
+  font-weight: 800 !important;
+  flex-basis: 100% !important;
+  text-align: center !important;
+  order: -1 !important;
+}
+.center-wrap h1, .center-wrap h2, .card-box h1, .card-box h2 { font-size: 2rem !important; line-height: 1.15 !important; }
