@@ -1,0 +1,50 @@
+{
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "The job title"
+    },
+    "company": {
+      "type": "string",
+      "description": "The hiring company name"
+    },
+    "location": {
+      "type": "string",
+      "description": "Where the role is based"
+    },
+    "remote": {
+      "type": "boolean",
+      "description": "Whether the role is remote friendly",
+      "default": true
+    },
+    "salary": {
+      "type": "string",
+      "description": "Salary range, e.g. $150k – $190k"
+    },
+    "employmentType": {
+      "type": "string",
+      "description": "The type of employment",
+      "enum": [
+        "Full-time",
+        "Part-time",
+        "Contract",
+        "Internship"
+      ],
+      "default": "Full-time"
+    },
+    "applyUrl": {
+      "type": "string",
+      "description": "Direct URL to apply to the job"
+    },
+    "description": {
+      "type": "string",
+      "description": "Role responsibilities and requirements"
+    }
+  },
+  "required": [
+    "title",
+    "company"
+  ],
+  "name": "Job",
+  "type": "object"
+}
