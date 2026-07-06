@@ -195,3 +195,29 @@ header:not(.mock-header) h1 {
   order: -1 !important;
 }
 .center-wrap h1, .center-wrap h2, .card-box h1, .card-box h2 { font-size: 2rem !important; line-height: 1.15 !important; }
+
+/* ---- App header (the one with the login controls, .header-user): large centered
+   "CloseTheOffer" branding, login info on the right, "Job Search Dashboard" as a
+   small page title on the left. Overrides the centered-h1 branding rule above. ---- */
+header:has(.header-user) {
+  position: relative !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  min-height: 66px !important;
+}
+header:has(.header-user)::after {
+  content: "CloseTheOffer";
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-family: 'Archivo', ui-sans-serif, sans-serif; font-weight: 800;
+  font-size: clamp(1.6rem, 3vw, 2.7rem); letter-spacing: -0.03em;
+  color: var(--text); white-space: nowrap; pointer-events: none;
+}
+header:has(.header-user) h1 {
+  flex: 0 1 auto !important; order: 0 !important;
+  text-align: left !important; font-size: 1rem !important; font-weight: 700 !important;
+  color: var(--text) !important; margin: 0 !important;
+}
+header:has(.header-user) .header-user {
+  order: 3 !important; flex: 0 0 auto !important; margin-left: auto !important; z-index: 1 !important;
+}
