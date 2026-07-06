@@ -35,7 +35,16 @@ html, body, input, textarea, select, button, .btn {
   font-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, sans-serif !important;
 }
 body {
-  background: var(--bg) !important;
+  /* base44 texture site-wide: the "raking light" image as a faint, fixed wash
+     behind every page (cards/panels sit on top; it shows through negative space). */
+  background-color: var(--bg) !important;
+  background-image:
+    linear-gradient(rgba(243,239,230,.93), rgba(243,239,230,.93)),
+    url('/new/hero-bg.jpg') !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
   color: var(--text) !important;
   -webkit-font-smoothing: antialiased;
 }
