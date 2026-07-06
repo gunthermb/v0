@@ -77,13 +77,44 @@ a:hover { color: var(--accent); }
 /* subtle hairline dividers instead of heavy shadows where the site draws borders */
 hr { border: 0; border-top: 1px solid var(--border); }
 
-/* ---- base44 hero: "raking light" architecture image layered under a warm
-   near-black wash, so it reads as subtle texture and the light text stays legible ---- */
+/* ---- Landing hero: match the base44 look — LIGHT cream with the "raking light"
+   image visible, huge editorial headline, dark text, serif lead + italic accent ---- */
 .hero {
   background-image:
-    linear-gradient(135deg, rgba(28,28,26,.90) 0%, rgba(43,43,38,.83) 50%, rgba(28,28,26,.90) 100%),
+    linear-gradient(rgba(243,239,230,.55) 0%, rgba(243,239,230,.64) 100%),
     url('/new/hero-bg.jpg') !important;
   background-size: cover !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
+  color: var(--text) !important;
 }
+.hero::before { opacity: .25 !important; }              /* tone down the old glow */
+/* hero text goes dark (was white on the old dark hero) — but NOT the buttons */
+.hero-content, .hero h1, .hero .lead, .hero-social, .hero-social * { color: var(--text) !important; }
+.hero-badge {
+  background: rgba(255,255,255,.5) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--muted) !important;
+}
+.hero h1 {
+  font-family: 'Archivo', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  font-size: clamp(3rem, 7.4vw, 6.4rem) !important;
+  line-height: 0.92 !important;
+  letter-spacing: -0.045em !important;
+  color: var(--text) !important;
+}
+.hero h1 em {
+  font-family: 'Newsreader', Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+  color: var(--accent) !important;
+}
+.hero .lead {
+  font-family: 'Newsreader', Georgia, 'Times New Roman', serif !important;
+  color: #45443d !important;
+  font-size: 1.2rem !important;
+  line-height: 1.5 !important;
+}
+/* the secondary "See features" ghost button reads on a light hero now */
+.hero .btn-ghost { color: var(--text) !important; border-color: var(--text) !important; background: transparent !important; }
