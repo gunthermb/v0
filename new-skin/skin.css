@@ -35,14 +35,15 @@ html, body, input, textarea, select, button, .btn {
   font-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, sans-serif !important;
 }
 body {
-  /* base44 texture site-wide: the "raking light" image as a faint, fixed wash
-     behind every page (cards/panels sit on top; it shows through negative space). */
+  /* Uniform base44 background across EVERY /new page: the "raking light" image
+     as one fixed cream-washed layer (same on the landing hero and all subpages).
+     Content sits in opaque cards/panels; the image shows through the negative space. */
   background-color: var(--bg) !important;
   background-image:
-    linear-gradient(rgba(243,239,230,.93), rgba(243,239,230,.93)),
+    linear-gradient(rgba(243,239,230,.50), rgba(243,239,230,.60)),
     url('/new/hero-bg.jpg') !important;
   background-size: cover !important;
-  background-position: center center !important;
+  background-position: center bottom !important;   /* show the textured lower band (vase/floor/column bases) on every page */
   background-attachment: fixed !important;
   background-repeat: no-repeat !important;
   color: var(--text) !important;
@@ -80,12 +81,8 @@ hr { border: 0; border-top: 1px solid var(--border); }
 /* ---- Landing hero: match the base44 look — LIGHT cream with the "raking light"
    image visible, huge editorial headline, dark text, serif lead + italic accent ---- */
 .hero {
-  background-image:
-    linear-gradient(rgba(243,239,230,.55) 0%, rgba(243,239,230,.64) 100%),
-    url('/new/hero-bg.jpg') !important;
-  background-size: cover !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
+  /* no own background — show the uniform fixed image on <body> (same as every page) */
+  background: transparent !important;
   color: var(--text) !important;
 }
 .hero::before { opacity: .25 !important; }              /* tone down the old glow */
