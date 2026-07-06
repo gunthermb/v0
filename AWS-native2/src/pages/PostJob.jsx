@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { dataGet, dataPost } from "@/lib/aws-native";
 import SiteNav from "@/components/site/SiteNav";
 import SiteFooter from "@/components/site/SiteFooter";
 
@@ -25,6 +25,7 @@ const inputClass =
   "w-full border border-hairline px-4 py-3 bg-background outline-none text-foreground placeholder:text-muted-foreground focus:border-foreground transition-colors";
 
 export default function PostJob() {
+  const navigate = useNavigate();
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -44,7 +45,7 @@ export default function PostJob() {
     setSubmitting(true);
     setError("");
     try {
-      await base44.entities.Job.create({
+      const job = {
         title: form.title.trim(),
         company: form.company.trim(),
         location: form.location.trim(),
@@ -53,10 +54,20 @@ export default function PostJob() {
         employmentType: form.employmentType,
         applyUrl: form.applyUrl.trim(),
         description: form.description.trim(),
-      });
+        postedAt: new Date().toISOString(),
+      };
+      // Persist to the per-user DynamoDB store (item "posted_jobs" holds the list).
+      const existing = await dataGet("posted_jobs");
+      const list = Array.isArray(existing?.value) ? existing.value : [];
+      await dataPost("posted_jobs", [job, ...list]);
       setSubmitted(true);
     } catch (err) {
-      setError(err.message || "Failed to post the job. Please try again.");
+      if (err.status === 401) {
+        setError("Please log in to post a job.");
+        setTimeout(() => navigate("/login"), 1200);
+      } else {
+        setError(err.message || "Failed to post the job. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }

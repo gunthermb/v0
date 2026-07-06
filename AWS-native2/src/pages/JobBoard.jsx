@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Search, Loader2, ArrowLeft } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { searchJobs } from "@/lib/aws-native";
 import JobCard from "@/components/site/JobCard";
 import SiteNav from "@/components/site/SiteNav";
 import SiteFooter from "@/components/site/SiteFooter";
 
 export default function JobBoard() {
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState("Cloud Architect");
   const [location, setLocation] = useState("");
   const [remoteOnly, setRemoteOnly] = useState(true);
@@ -22,43 +23,18 @@ export default function JobBoard() {
     setError("");
     setResults([]);
     try {
-      const prompt = `Search the web for current, real job listings that are actively posted right now. Find 12 real job postings matching: keyword "${keyword}", location "${location || "any"}", remote-only: ${remoteOnly ? "yes" : "no"}.
-
-Return ONLY real, currently active job listings from major job boards (LinkedIn, Indeed, Glassdoor, ZipRecruiter, company career pages). Include the actual job title, company name, location, salary range if available, date posted, source board, and a direct URL to the listing if available.
-
-For each job, provide: title, company, location, remote (boolean), salary (string or null), posted (e.g. "2 days ago"), source (board name), url (direct link or null), and a short description.`;
-
-      const res = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        add_context_from_internet: true,
-        model: "gemini_3_flash",
-        response_json_schema: {
-          type: "object",
-          properties: {
-            jobs: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  company: { type: "string" },
-                  location: { type: "string" },
-                  remote: { type: "boolean" },
-                  salary: { type: "string" },
-                  posted: { type: "string" },
-                  source: { type: "string" },
-                  url: { type: "string" },
-                  description: { type: "string" },
-                },
-              },
-            },
-          },
-        },
-      });
-      setResults(res.jobs || []);
+      // Real listings from the CloseTheOffer job-search Lambda
+      // (Remotive + Adzuna + JSearch, Bedrock-ranked). Cognito-authed.
+      const jobs = await searchJobs({ query: keyword, location, remoteOnly });
+      setResults(jobs);
       setSearched(true);
     } catch (err) {
-      setError(err.message || "Failed to fetch job listings. Please try again.");
+      if (err.status === 401) {
+        setError("Please log in to search live listings.");
+        setTimeout(() => navigate("/login"), 1200);
+      } else {
+        setError(err.message || "Failed to fetch job listings. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

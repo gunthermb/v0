@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function SiteNav() {
+  const { isAuthenticated, user, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -40,12 +42,26 @@ export default function SiteNav() {
             Post a Job
           </Link>
         </div>
-        <Link
-          to="/login"
-          className="font-mono text-xs uppercase tracking-[0.16em] bg-primary text-primary-foreground px-5 py-2.5 hover:bg-accent transition-colors"
-        >
-          Start free
-        </Link>
+        {isAuthenticated ? (
+          <div className="flex items-center gap-5">
+            <span className="mono-label hidden sm:inline max-w-[180px] truncate" title={user?.email}>
+              {user?.email}
+            </span>
+            <button
+              onClick={logout}
+              className="font-mono text-xs uppercase tracking-[0.16em] border border-hairline px-5 py-2.5 hover:border-foreground transition-colors"
+            >
+              Log out
+            </button>
+          </div>
+        ) : (
+          <Link
+            to="/login"
+            className="font-mono text-xs uppercase tracking-[0.16em] bg-primary text-primary-foreground px-5 py-2.5 hover:bg-accent transition-colors"
+          >
+            Start free
+          </Link>
+        )}
       </nav>
     </header>
   );

@@ -117,14 +117,22 @@ Resources:
       AllowedOAuthScopes: [openid, email, profile]
       AllowedOAuthFlowsUserPoolClient: true
       # Accept sign-in redirects from the custom domain (apex + www) and the CloudFront URL.
+      # /dashboard = the / site's post-login page; /new/dashboard = the reskinned
+      # (base44 look) copy served under /new, which reuses this same Cognito client.
       CallbackURLs:
         - https://closetheoffer.com/dashboard
         - https://www.closetheoffer.com/dashboard
         - https://d3holrr9fpnwaw.cloudfront.net/dashboard
+        - https://closetheoffer.com/new/dashboard
+        - https://www.closetheoffer.com/new/dashboard
+        - https://d3holrr9fpnwaw.cloudfront.net/new/dashboard
       LogoutURLs:
         - https://closetheoffer.com/login
         - https://www.closetheoffer.com/login
         - https://d3holrr9fpnwaw.cloudfront.net/login
+        - https://closetheoffer.com/new/login
+        - https://www.closetheoffer.com/new/login
+        - https://d3holrr9fpnwaw.cloudfront.net/new/login
 
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain

@@ -1,0 +1,69 @@
+/*
+  base44 look — reskin overlay for the CloseTheOffer static pages served under /new.
+  Loaded LAST in each page so it overrides the page's own <style> without any
+  markup or JS changes (behaviour stays identical to the / site). It remaps the
+  site's existing design tokens to the base44 palette + typography.
+*/
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* base44 palette mapped onto the site's variable names (index/app/app-free) */
+  --purple: #1c1c1a;          /* primary/brand  -> near-black (base44 primary) */
+  --purple-dark: #000000;
+  --purple-mid: #6e746a;      /* -> olive accent */
+  --purple-light: #e7e2d6;    /* light tint     -> warm cream */
+  --green: #6e746a;           /* accent olive-green */
+  --red: #b23a3a;             /* destructive */
+  --yellow: #b8863b;
+  --blue: #6e746a;
+  --text: #1c1c1a;
+  --muted: #5f5f58;
+  --border: #d8d2c6;          /* hairline */
+  --bg: #f3efe6;              /* cream background */
+  --bg-subtle: #efeae0;
+  --bg-gray: #ece7dc;
+  --surface: #f7f4ee;         /* card surface */
+  --accent: #6e746a;
+  --shadow-sm: 0 1px 0 rgba(28,28,26,.04);
+  --shadow: 0 1px 0 rgba(28,28,26,.06);
+  --shadow-md: 0 2px 0 rgba(28,28,26,.06);
+  --shadow-lg: 0 2px 0 rgba(28,28,26,.08);
+}
+
+/* ---- Typography: Archivo for UI, Newsreader for editorial accents, JetBrains mono for labels ---- */
+html, body, input, textarea, select, button, .btn {
+  font-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+}
+body {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 {
+  font-family: 'Archivo', ui-sans-serif, sans-serif !important;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+/* big hero headings get the tighter editorial treatment */
+h1 { letter-spacing: -0.04em; line-height: 1.02; }
+
+/* ---- Square off the SaaS roundness toward the base44 look (keep circles as circles) ---- */
+button, .btn, input, textarea, select,
+.card, .modal, .panel, .badge, .chip, .tag, .pill,
+[class*="card"], [class*="modal"], [class*="panel"], [class*="btn"],
+[class*="tab"], [class*="badge"], [class*="chip"] {
+  border-radius: 3px !important;
+}
+/* preserve intentional circles (avatars, dots, toggles) */
+[style*="border-radius: 50%"], [style*="border-radius:50%"],
+.avatar, [class*="avatar"], [class*="round"], [class*="dot"] {
+  border-radius: 50% !important;
+}
+
+/* ---- Accent + surfaces ---- */
+a { color: var(--purple); }
+a:hover { color: var(--accent); }
+::selection { background: #dfe0d6; }
+
+/* subtle hairline dividers instead of heavy shadows where the site draws borders */
+hr { border: 0; border-top: 1px solid var(--border); }

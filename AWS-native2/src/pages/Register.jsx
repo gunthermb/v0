@@ -1,6 +1,13 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  ctoSignUp,
+  ctoConfirmSignUp,
+  ctoSignIn,
+  ctoResendCode,
+  ctoGoogleSignIn,
+  friendlyAuthError,
+} from "@/lib/aws-native";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +18,7 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 
 export default function Register() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,10 +36,10 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await base44.auth.register({ email, password });
+      await ctoSignUp(email, password);
       setShowOtp(true);
     } catch (err) {
-      setError(err.message || "Registration failed");
+      setError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -41,13 +49,12 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-      if (result?.access_token) {
-        base44.auth.setToken(result.access_token);
-      }
-      window.location.href = "/";
+      // Confirm the account, then sign in to get tokens for this session.
+      await ctoConfirmSignUp(email, otpCode);
+      await ctoSignIn(email, password);
+      navigate("/jobs");
     } catch (err) {
-      setError(err.message || "Invalid verification code");
+      setError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -56,18 +63,18 @@ export default function Register() {
   const handleResend = async () => {
     setError("");
     try {
-      await base44.auth.resendOtp(email);
+      await ctoResendCode(email);
       toast({
         title: "Code sent",
         description: "Check your email for the new code.",
       });
     } catch (err) {
-      setError(err.message || "Failed to resend code");
+      setError(friendlyAuthError(err));
     }
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/");
+    ctoGoogleSignIn();
   };
 
   if (showOtp) {

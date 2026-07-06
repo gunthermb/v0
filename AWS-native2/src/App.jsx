@@ -10,6 +10,10 @@ import NewLookBanner from '@/components/NewLookBanner';
 import Home from '@/pages/Home';
 import JobBoard from '@/pages/JobBoard';
 import PostJob from '@/pages/PostJob';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -40,6 +44,10 @@ const AuthenticatedApp = () => {
       <Route path="/" element={<Home />} />
       <Route path="/jobs" element={<JobBoard />} />
       <Route path="/new" element={<PostJob />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

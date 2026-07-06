@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link, useNavigate } from "react-router-dom";
+import { ctoForgotPassword } from "@/lib/aws-native";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { Mail, ArrowLeft, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ForgotPassword() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -16,12 +17,15 @@ export default function ForgotPassword() {
     e.preventDefault();
     setLoading(true);
     try {
-      await base44.auth.resetPasswordRequest(email);
+      await ctoForgotPassword(email);
     } catch {
-      // Always show success regardless
+      // Don't reveal whether the account exists — always continue to the reset step.
     } finally {
       setLoading(false);
       setSent(true);
+      // Hand off to the reset page with the email prefilled so the user can enter
+      // the emailed code and a new password.
+      setTimeout(() => navigate(`/reset-password?email=${encodeURIComponent(email)}`), 1200);
     }
   };
 
@@ -29,7 +33,7 @@ export default function ForgotPassword() {
     <AuthLayout
       icon={Mail}
       title="Reset password"
-      subtitle="We'll send you a link to reset it"
+      subtitle="We'll email you a reset code"
       footer={
         <Link to="/login" className="text-primary font-medium hover:underline">
           <ArrowLeft className="w-3 h-3 inline mr-1" />Back to log in
@@ -38,7 +42,8 @@ export default function ForgotPassword() {
     >
       {sent ? (
         <p className="text-sm text-foreground text-center">
-          If an account exists with that email, you'll receive a password reset link shortly.
+          If an account exists with that email, you'll receive a reset code shortly.
+          Taking you to the reset page…
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -66,7 +71,7 @@ export default function ForgotPassword() {
                 Sending...
               </>
             ) : (
-              "Send reset link"
+              "Send reset code"
             )}
           </Button>
         </form>

@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # Created by GuntherCloudSolutions
-# Last updated: 2026-06-28
+# Last updated: 2026-07-06
 #
 # One-shot deploy for the AWS-native CloseTheOffer stack.
 # Prereqs: AWS CLI + AWS SAM CLI installed and `aws configure` done.
+#          Node.js + npm (to build the AWS-native2 app served at /new).
 #          Bedrock model access enabled in the Console (one time).
 set -euo pipefail
 
 REGION="${AWS_REGION:-us-east-1}"
 APP="closetheoffer"
-SITE_DIR="$(cd "$(dirname "$0")/.." && pwd)"   # repo root (the site files)
 HERE="$(cd "$(dirname "$0")" && pwd)"
+# The static site (index.html, app.html, login.html, aws-config.js, …). Override with
+# SITE_DIR=... if it lives elsewhere. Defaults to the sibling closetheoffer.com/ folder.
+SITE_DIR="${SITE_DIR:-$(cd "$HERE/../closetheoffer.com" && pwd)}"
 
 # Load deploy-time secrets (Adzuna / JSearch / Google) if present. Gitignored.
 if [ -f "$HERE/.env" ]; then
@@ -18,7 +21,7 @@ if [ -f "$HERE/.env" ]; then
   set -a; . "$HERE/.env"; set +a
 fi
 
-echo "==> 1/4  Deploy backend (Cognito + API + Bedrock + DynamoDB)"
+echo "==> 1/5  Deploy backend (Cognito + API + Bedrock + DynamoDB)"
 # Optional Google login: export GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET first.
 PARAMS="AppName=$APP"
 if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
@@ -43,7 +46,7 @@ echo "==> backend outputs (paste these into frontend/aws-config.js):"
 aws cloudformation describe-stacks --region "$REGION" --stack-name "${APP}-backend" \
   --query "Stacks[0].Outputs" --output table
 
-echo "==> 2/4  Deploy hosting (S3 + CloudFront + routing function)"
+echo "==> 2/5  Deploy hosting (S3 + CloudFront + routing function)"
 aws cloudformation deploy \
   --region "$REGION" \
   --stack-name "${APP}-hosting" \
@@ -55,14 +58,30 @@ BUCKET=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "${A
 DIST=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "${APP}-hosting" \
   --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)
 
-echo "==> 3/4  Upload site to s3://$BUCKET"
+echo "==> 3/5  Upload site to s3://$BUCKET"
 # NOTE: make sure aws-config.js is filled in and copied into the site root first.
 aws s3 sync "$SITE_DIR" "s3://$BUCKET" \
   --exclude ".git/*" --exclude "aws-native/*" --exclude ".idea/*" \
+  --exclude "AWS-native2/*" \
   --exclude "*.md" --exclude "deploy.sh" \
   --exclude "*.DS_Store" --exclude ".env" --exclude "*.local.md"
 
-echo "==> 4/4  Invalidate CloudFront cache"
+echo "==> 4/5  Build + upload the reskinned site (base44 look) to /new"
+# /new serves the SAME static site, reskinned with the base44 look and re-scoped
+# under /new (see new-skin/build.sh). It reuses this stack's Cognito auth + API,
+# so it behaves identically to the / site — just a different skin. The /new/*
+# clean-URL routing is handled by hosting.yaml's CloudFront function.
+NEW_BUILD="$HERE/new-skin/build.sh"
+if [ -x "$NEW_BUILD" ]; then
+  NEW_DIST="$HERE/.new-dist"
+  SITE_SRC="$SITE_DIR" "$NEW_BUILD" "$NEW_DIST"
+  # --delete keeps the /new prefix in sync with the fresh build (scoped to /new).
+  aws s3 sync "$NEW_DIST" "s3://$BUCKET/new" --delete --exclude "*.DS_Store"
+else
+  echo "    (skipped: $NEW_BUILD not found or not executable)"
+fi
+
+echo "==> 5/5  Invalidate CloudFront cache"
 aws cloudfront create-invalidation --distribution-id "$DIST" --paths "/*" >/dev/null
 
 echo "Done. Site URL:"
