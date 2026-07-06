@@ -138,16 +138,16 @@ hr { border: 0; border-top: 1px solid var(--border); }
 /* the secondary "See features" ghost button reads on a light hero now */
 .hero .btn-ghost { color: var(--text) !important; border-color: var(--text) !important; background: transparent !important; }
 
-/* ---- App (app.html): uniform card size across tabs — match the Interview Prep
-   grid (repeat(auto-fill, minmax(320px, 1fr)), gap 12px). Interviews, Job Search,
-   Job Board and Connectors align to it. The Pipeline kanban and the Resume-Scan
-   score tiles are different layouts and are intentionally left as-is. ---- */
-.int-grid, .job-grid, .jt-grid, .conn-cards {
+/* ---- App (app.html): uniform ~320px card size across EVERY tab — match the
+   Interview Prep grid: repeat(auto-fill, minmax(320px, 1fr)), gap 12px. ---- */
+.int-grid, .job-grid, .jt-grid, .conn-cards, .rs-score-row {
   display: grid !important;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
   gap: 12px !important;
 }
-/* Interviews cards were flex (min 260 / max 360) — let them fill the grid cell */
-.int-card { min-width: 0 !important; max-width: none !important; flex: 0 1 auto !important; }
+/* cards that were flex-constrained — let them fill the 320px grid cell */
+.int-card, .rs-score-card { min-width: 0 !important; max-width: none !important; flex: 0 1 auto !important; }
+/* Pipeline kanban: widen each status column so its cards are ~320 too (board scrolls) */
+.pipeline .col { min-width: 344px !important; }
 /* match Interview Prep's card padding so the cards read as one size */
 .int-card, .job-card, .jt-card, .conn-card { padding: 16px !important; }
